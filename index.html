@@ -331,6 +331,11 @@ window.APP_CONFIG = {
     appId: "VLOZ_APP_ID"
   },
 
+  /* ---------- REŽIM ----------
+     false = NOUZOVÝ REŽIM: data jen v tomto prohlížeči, Firebase se nepoužije.
+     Až bude Firebase nastavený, přepni na true. */
+  useFirebase: false,
+
   /* Název kolekce ve Firestore */
   collection: "tisky3d",
 
@@ -341,7 +346,7 @@ window.APP_CONFIG = {
          .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
      POZOR: heslo na straně prohlížeče je jen základní zábrana, ne plná
      ochrana dat. Pro ostrý provoz nastav Firebase Authentication + pravidla. */
-  passwordHash: "7e9869a79f6591f3df4a36db6431ffa9971fd36ede9e8a448d226c1a49eea22c",
+  password: "3dtisk",   // ← heslo napsané přímo v kódu, stačí přepsat
 
   /* ---------- VOLBY V ROLOVACÍCH SEZNAMECH ---------- */
   options: {
@@ -2159,7 +2164,7 @@ window.H = {
 window.DB = (() => {
   const cfg = window.APP_CONFIG;
   const LS_KEY = "tisk3d_data_v1";
-  const configured = !String(cfg.firebase.apiKey).startsWith("VLOZ") && window.firebase;
+  const configured = cfg.useFirebase && !String(cfg.firebase.apiKey).startsWith("VLOZ") && window.firebase;
 
   let fs = null;
   if (configured) {
@@ -2234,14 +2239,14 @@ window.Auth = {
   KEY: "tisk3d_auth",
 
   isLoggedIn() {
-    try { return sessionStorage.getItem(this.KEY) === window.APP_CONFIG.passwordHash; }
+    try { return sessionStorage.getItem(this.KEY) === "ok"; }
     catch { return false; }
   },
 
+  /** Heslo se porovnává přímo s hodnotou v config (APP_CONFIG.password) */
   async login(password) {
-    const hash = await H.sha256(password);
-    if (hash !== window.APP_CONFIG.passwordHash) return false;
-    try { sessionStorage.setItem(this.KEY, hash); } catch { /* ignorováno */ }
+    if (password !== window.APP_CONFIG.password) return false;
+    try { sessionStorage.setItem(this.KEY, "ok"); } catch { /* ignorováno */ }
     return true;
   },
 
