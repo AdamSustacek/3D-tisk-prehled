@@ -145,6 +145,15 @@ dialog h2 { margin: 0 0 18px; }
 .grid .span2 { grid-column: span 2; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
+/* ---------- Tisk stránky ---------- */
+@media print {
+  .topbar, .toolbar, .seed, .toast, td.actions, thead th:last-child, #count { display: none !important; }
+  body { background: #fff; color: #000; }
+  .container { padding: 0; max-width: none; }
+  .stat, .table-wrap { box-shadow: none; border: 1px solid #ccc; }
+  th, td { padding: 6px 8px; font-size: 12px; white-space: normal; }
+}
+
 /* ---------- Oznámení ---------- */
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
@@ -207,6 +216,7 @@ dialog h2 { margin: 0 0 18px; }
     <header class="topbar">
       <div class="brand"><span class="logo-sm">🧊</span> 3D Tisk <span id="mode-badge" class="mode"></span></div>
       <div class="top-actions">
+        <button id="btn-print" class="btn ghost">🖨 Tisk</button>
         <button id="btn-export" class="btn ghost">⬇ Export CSV</button>
         <button id="btn-logout" class="btn ghost">Odhlásit</button>
       </div>
@@ -225,6 +235,7 @@ dialog h2 { margin: 0 0 18px; }
       <section class="toolbar">
         <input id="search" type="search" placeholder="🔍 Hledat (název, barva, poznámka…)">
         <select id="flt-rok"></select>
+        <button id="btn-year" class="btn ghost" title="Založit nový rok">＋ Nový rok</button>
         <select id="flt-tiskarna"></select>
         <select id="flt-dokonceno"></select>
         <button id="btn-new" class="btn primary">＋ Nový tisk</button>
@@ -277,6 +288,7 @@ dialog h2 { margin: 0 0 18px; }
         <label>Barva filamentu <input name="barva" list="list-barva" placeholder="vyber nebo napiš"></label>
         <label>Model filamentu <select name="model" id="f-model"></select></label>
         <label>Vlastník filamentu <select name="vlastnik" id="f-vlastnik"></select></label>
+        <label>Rok (evidence) <select name="rok" id="f-rok"></select></label>
         <label class="span2">Poznámka <textarea name="poznamka" rows="2" maxlength="300"></textarea></label>
       </div>
       <datalist id="list-barva"></datalist>
@@ -323,34 +335,30 @@ window.APP_CONFIG = {
      3) Build → Firestore Database → Create database
      Dokud jsou hodnoty "VLOZ_...", data se ukládají jen lokálně v prohlížeči. */
   firebase: {
-    apiKey: "VLOZ_API_KEY",
-    authDomain: "VLOZ_PROJECT.firebaseapp.com",
-    projectId: "VLOZ_PROJECT_ID",
-    storageBucket: "VLOZ_PROJECT.appspot.com",
-    messagingSenderId: "VLOZ_SENDER_ID",
-    appId: "VLOZ_APP_ID"
+    apiKey: "AIzaSyD6rx_NMT-b1HzY49d27DgVoxp9Q8O1CKU",
+    authDomain: "d-tisk-a1ffd.firebaseapp.com",
+    projectId: "d-tisk-a1ffd",
+    storageBucket: "d-tisk-a1ffd.firebasestorage.app",
+    messagingSenderId: "8460306375",
+    appId: "1:8460306375:web:f60fd747316c63dd9cfbe2"
   },
 
   /* ---------- REŽIM ----------
-     false = NOUZOVÝ REŽIM: data jen v tomto prohlížeči, Firebase se nepoužije.
-     Až bude Firebase nastavený, přepni na true. */
-  useFirebase: false,
+     false = NOUZOVÝ REŽIM (data jen v tomto prohlížeči).
+     true = ukládání do Firebase Firestore. */
+  useFirebase: true,
 
   /* Název kolekce ve Firestore */
   collection: "tisky3d",
 
   /* ---------- HESLO ----------
-     Uložen je SHA-256 otisk hesla (výchozí heslo: 3dtisk).
-     Nový otisk získáš v konzoli prohlížeče:
-       crypto.subtle.digest('SHA-256', new TextEncoder().encode('noveheslo'))
-         .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
-     POZOR: heslo na straně prohlížeče je jen základní zábrana, ne plná
-     ochrana dat. Pro ostrý provoz nastav Firebase Authentication + pravidla. */
-  password: "3dtisk",   // ← heslo napsané přímo v kódu, stačí přepsat
+     Heslo je napsané přímo v kódu, stačí ho přepsat.
+     POZOR: heslo v prohlížeči je jen základní zábrana, ne plná ochrana dat. */
+  password: "sustacek.adam",   // ← heslo napsané přímo v kódu, stačí přepsat
 
   /* ---------- VOLBY V ROLOVACÍCH SEZNAMECH ---------- */
   options: {
-    kdo: ["Adam Šustáček"],
+    kdo: ["Adam Šustáček", "Kleinová"],
     tiskarna: ["Prusa MK4", "Bambu Lab"],
     model: ["PLA", "PETG", "PLA / PETG", "ABS", "ASA", "TPU"],
     vlastnik: ["Škola", "Šustáček"],
@@ -365,6 +373,7 @@ window.APP_CONFIG = {
 /* Data převedená z 3D_TISK.xlsx (jednorázový import). */
 window.SEED_DATA = [
  {
+  "rok": 2026,
   "cislo": 1,
   "nazev": "Domeček",
   "datum": "2026-02-09",
@@ -378,6 +387,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 2,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-16",
@@ -391,6 +401,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 3,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-16",
@@ -404,6 +415,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 4,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-16",
@@ -417,6 +429,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 5,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-16",
@@ -430,6 +443,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 6,
   "nazev": "Držáky na kabeli",
   "datum": "2026-03-17",
@@ -443,6 +457,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 7,
   "nazev": "Domeček",
   "datum": "2026-03-16",
@@ -456,6 +471,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 8,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-17",
@@ -469,6 +485,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 9,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-18",
@@ -482,6 +499,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 10,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-19",
@@ -495,6 +513,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 11,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-20",
@@ -508,6 +527,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 12,
   "nazev": "Klíček na držák na role",
   "datum": "2026-03-20",
@@ -521,6 +541,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 13,
   "nazev": "Klíček na držák na role",
   "datum": "2026-03-20",
@@ -534,6 +555,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 14,
   "nazev": "Srdce",
   "datum": "2026-03-20",
@@ -547,6 +569,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 15,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-23",
@@ -560,6 +583,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 16,
   "nazev": "píštalka",
   "datum": "2025-03-23",
@@ -573,6 +597,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 17,
   "nazev": "vírobky dětí INF",
   "datum": "2026-03-19",
@@ -586,6 +611,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 18,
   "nazev": "vírobky dětí INF",
   "datum": "2026-03-19",
@@ -599,6 +625,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 19,
   "nazev": "vírobky dětí INF",
   "datum": "2026-03-19",
@@ -612,6 +639,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 20,
   "nazev": "vírobky dětí INF + píštalka",
   "datum": "2026-03-19",
@@ -625,6 +653,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 21,
   "nazev": "vírobky dětí inf + kritka na záchod",
   "datum": "2026-03-19",
@@ -638,6 +667,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 22,
   "nazev": "Kritka na záchod",
   "datum": "2026-03-15",
@@ -651,6 +681,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 23,
   "nazev": "kritky na záchod",
   "datum": "2026-04-08",
@@ -664,6 +695,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 24,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-14",
@@ -677,6 +709,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 25,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-14",
@@ -690,6 +723,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 26,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-15",
@@ -703,6 +737,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 27,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-15",
@@ -716,6 +751,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 28,
   "nazev": "Trubka",
   "datum": "2026-04-15",
@@ -729,6 +765,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 29,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-22",
@@ -742,6 +779,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 30,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-22",
@@ -755,6 +793,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 31,
   "nazev": "INF deti vírobky",
   "datum": "2026-04-22",
@@ -768,6 +807,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 32,
   "nazev": "Tisk pistalky a nastavce na lampu",
   "datum": "2026-04-23",
@@ -781,6 +821,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 33,
   "nazev": "pístalky",
   "datum": "2026-04-27",
@@ -794,6 +835,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 34,
   "nazev": "pistalky",
   "datum": "2026-04-27",
@@ -807,6 +849,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 35,
   "nazev": "Mističky + uchýtky",
   "datum": "2026-05-05",
@@ -820,6 +863,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 36,
   "nazev": "Mističky + uchýtky",
   "datum": "2026-05-05",
@@ -833,6 +877,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 37,
   "nazev": "TAlismani poláci",
   "datum": "2026-05-11",
@@ -846,6 +891,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 38,
   "nazev": "TAlismani poláci",
   "datum": "2026-05-12",
@@ -859,6 +905,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 39,
   "nazev": "TAlismani poláci",
   "datum": "2026-05-13",
@@ -872,6 +919,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 40,
   "nazev": "TAlismani poláci",
   "datum": "2026-05-14",
@@ -885,6 +933,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 41,
   "nazev": "TAlismani poláci",
   "datum": "2026-05-15",
@@ -898,6 +947,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 42,
   "nazev": "Šéf přívěšky",
   "datum": "2026-05-18",
@@ -911,6 +961,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 43,
   "nazev": "Šéf přívěšky",
   "datum": "2026-05-18",
@@ -924,6 +975,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 44,
   "nazev": "hračka",
   "datum": "2026-05-29",
@@ -937,6 +989,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 45,
   "nazev": "hračka",
   "datum": "2026-05-30",
@@ -950,6 +1003,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 46,
   "nazev": "stojan na sluchátka",
   "datum": "2026-05-31",
@@ -963,6 +1017,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 47,
   "nazev": "stojan na sluchátka",
   "datum": "2026-06-01",
@@ -976,6 +1031,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 48,
   "nazev": "stojan na sluchátka",
   "datum": "2026-06-01",
@@ -989,6 +1045,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 49,
   "nazev": "Krokodíli Paní Říhová",
   "datum": "2026-06-01",
@@ -1002,6 +1059,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 50,
   "nazev": "Krokodíli Paní Říhová",
   "datum": "2026-06-01",
@@ -1015,6 +1073,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 51,
   "nazev": "Brněnský petrov Paní Říhová",
   "datum": "2026-06-01",
@@ -1028,6 +1087,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 52,
   "nazev": "medaile pro šéfa",
   "datum": "2026-06-01",
@@ -1041,6 +1101,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 53,
   "nazev": "pohár pro šéfa",
   "datum": "2026-06-01",
@@ -1054,6 +1115,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 54,
   "nazev": "medaile pro šéfa",
   "datum": "2026-06-05",
@@ -1067,6 +1129,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 55,
   "nazev": "pro paní říhovou",
   "datum": "2026-06-05",
@@ -1080,6 +1143,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 56,
   "nazev": "medaile pro šéfa",
   "datum": "2026-06-05",
@@ -1093,6 +1157,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 57,
   "nazev": "pohár pro šéfa",
   "datum": "2026-06-05",
@@ -1106,6 +1171,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 58,
   "nazev": "pohár pro šéfa",
   "datum": "2026-06-05",
@@ -1119,6 +1185,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 59,
   "nazev": "pohár pro šéfa",
   "datum": "2026-06-05",
@@ -1132,6 +1199,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 60,
   "nazev": "medaile pro šéfa",
   "datum": "2026-06-15",
@@ -1145,6 +1213,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 61,
   "nazev": "medaile pro šéfa",
   "datum": "2026-06-15",
@@ -1158,6 +1227,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 62,
   "nazev": "medaile pro šéfa",
   "datum": "2026-06-15",
@@ -1171,6 +1241,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 63,
   "nazev": "nĚco",
   "datum": "2026-06-15",
@@ -1184,6 +1255,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 64,
   "nazev": "nĚco",
   "datum": "2026-06-15",
@@ -1197,6 +1269,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 65,
   "nazev": "nĚco",
   "datum": "2026-06-15",
@@ -1210,6 +1283,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 66,
   "nazev": "nĚco",
   "datum": "2026-06-15",
@@ -1223,6 +1297,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 67,
   "nazev": "nĚco",
   "datum": "2026-06-15",
@@ -1236,6 +1311,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 68,
   "nazev": "nĚco",
   "datum": "2026-06-15",
@@ -1249,6 +1325,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 69,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1262,6 +1339,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 70,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1275,6 +1353,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 71,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1288,6 +1367,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 72,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1301,6 +1381,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 73,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1314,6 +1395,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 74,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1327,6 +1409,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 75,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1340,6 +1423,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 76,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1353,6 +1437,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 77,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1366,6 +1451,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 78,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1379,6 +1465,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 79,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1392,6 +1479,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 80,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1405,6 +1493,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 81,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1418,6 +1507,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 82,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1431,6 +1521,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 83,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1444,6 +1535,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 84,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1457,6 +1549,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 85,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1470,6 +1563,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 86,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1483,6 +1577,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 87,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1496,6 +1591,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 88,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1509,6 +1605,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 89,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1522,6 +1619,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 90,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1535,6 +1633,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 91,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1548,6 +1647,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 92,
   "nazev": "serioví tisk pro školu",
   "datum": "2026-06-15",
@@ -1561,6 +1661,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 93,
   "nazev": "Opravný model poháru",
   "datum": "2026-06-15",
@@ -1574,6 +1675,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 94,
   "nazev": "Opravný model poháru",
   "datum": "2026-06-15",
@@ -1587,6 +1689,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 95,
   "nazev": "Opravný model poháru",
   "datum": "2026-06-15",
@@ -1600,6 +1703,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 96,
   "nazev": "Opravný model poháru",
   "datum": "2026-06-15",
@@ -1613,6 +1717,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 97,
   "nazev": "Opravný model poháru",
   "datum": "2026-06-15",
@@ -1626,6 +1731,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 98,
   "nazev": "Opravný model poháru",
   "datum": "2026-06-15",
@@ -1639,6 +1745,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 99,
   "nazev": "Opravný model medailii",
   "datum": "2026-06-17",
@@ -1652,6 +1759,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 100,
   "nazev": "Opravný model medailii",
   "datum": "2026-06-17",
@@ -1665,6 +1773,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 101,
   "nazev": "Opravný model medailii",
   "datum": "2026-06-17",
@@ -1678,6 +1787,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 102,
   "nazev": "Opravný model medailii",
   "datum": "2026-06-17",
@@ -1691,6 +1801,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 103,
   "nazev": "Medaile",
   "datum": "2026-06-17",
@@ -1704,6 +1815,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 104,
   "nazev": "Medaile",
   "datum": "2026-06-17",
@@ -1717,6 +1829,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 105,
   "nazev": "Medaile",
   "datum": "2026-06-17",
@@ -1730,6 +1843,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 106,
   "nazev": "Medaile",
   "datum": "2026-06-17",
@@ -1743,6 +1857,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 107,
   "nazev": "Medaile",
   "datum": "2026-06-17",
@@ -1756,6 +1871,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 108,
   "nazev": "Medaile",
   "datum": "2026-06-17",
@@ -1769,6 +1885,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 109,
   "nazev": "Pohár zkouška",
   "datum": "2026-06-17",
@@ -1782,6 +1899,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 110,
   "nazev": "Píšťalky",
   "datum": "2026-06-22",
@@ -1795,6 +1913,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 111,
   "nazev": "Píšťalky",
   "datum": "2026-06-22",
@@ -1808,6 +1927,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 112,
   "nazev": "Píšťalky",
   "datum": "2026-06-22",
@@ -1821,6 +1941,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2026,
   "cislo": 113,
   "nazev": "medaile",
   "datum": "2026-06-22",
@@ -1834,6 +1955,7 @@ window.SEED_DATA = [
   "vlastnik": ""
  },
  {
+  "rok": 2027,
   "cislo": 1,
   "nazev": "KALIBRACE",
   "datum": "2026-09-07",
@@ -1847,6 +1969,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 2,
   "nazev": "KALIBRACE",
   "datum": "2026-09-07",
@@ -1860,6 +1983,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 3,
   "nazev": "KALIBRACE",
   "datum": "2026-09-07",
@@ -1873,6 +1997,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 4,
   "nazev": "KALIBRACE",
   "datum": "2026-09-07",
@@ -1886,6 +2011,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 5,
   "nazev": "KALIBRACE",
   "datum": "2026-09-07",
@@ -1899,6 +2025,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 6,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-07",
@@ -1912,6 +2039,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 7,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-08",
@@ -1925,6 +2053,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 8,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-09",
@@ -1938,6 +2067,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 9,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-10",
@@ -1951,6 +2081,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 10,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-11",
@@ -1964,6 +2095,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 11,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-14",
@@ -1977,6 +2109,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 12,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-15",
@@ -1990,6 +2123,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 13,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-16",
@@ -2003,6 +2137,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 14,
   "nazev": "Dotisk držáku na sluchátka škola",
   "datum": "2026-09-17",
@@ -2016,6 +2151,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 15,
   "nazev": "Marek kritka na baterku",
   "datum": "2026-09-15",
@@ -2029,6 +2165,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 16,
   "nazev": "Mazátko na tabuli",
   "datum": "2026-09-30",
@@ -2042,6 +2179,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 17,
   "nazev": "Krabička na Čtyřkolku",
   "datum": "2026-01-30",
@@ -2055,6 +2193,7 @@ window.SEED_DATA = [
   "vlastnik": "Šustáček"
  },
  {
+  "rok": 2027,
   "cislo": 18,
   "nazev": "Protéza zubní",
   "datum": "2026-10-13",
@@ -2068,6 +2207,7 @@ window.SEED_DATA = [
   "vlastnik": "Škola"
  },
  {
+  "rok": 2027,
   "cislo": 19,
   "nazev": "Zasobník na filament",
   "datum": "2026-10-20",
@@ -2236,24 +2376,15 @@ window.DB = (() => {
    ========================================================== */
 
 window.Auth = {
-  KEY: "tisk3d_auth",
-
-  isLoggedIn() {
-    try { return sessionStorage.getItem(this.KEY) === "ok"; }
-    catch { return false; }
-  },
+  /* Přihlášení se NEUKLÁDÁ – po každém obnovení stránky se heslo žádá znovu. */
+  isLoggedIn() { return false; },
 
   /** Heslo se porovnává přímo s hodnotou v config (APP_CONFIG.password) */
   async login(password) {
-    if (password !== window.APP_CONFIG.password) return false;
-    try { sessionStorage.setItem(this.KEY, "ok"); } catch { /* ignorováno */ }
-    return true;
+    return password === window.APP_CONFIG.password;
   },
 
-  logout() {
-    try { sessionStorage.removeItem(this.KEY); } catch { /* ignorováno */ }
-    location.reload();
-  }
+  logout() { location.reload(); }
 };
 
 </script>
@@ -2268,7 +2399,30 @@ window.UI = (() => {
   const opt = APP_CONFIG.options;
 
   let records = [];                       // aktuální data z databáze
-  let sort = { key: "datum", dir: -1 };   // výchozí řazení: nejnovější nahoře
+  let sort = { key: "datum", dir: -1 };
+  let yearSel = null;                     // vybraný rok ("" = všechny roky)
+  const YKEY = "tisk3d_extra_years";      // prázdné roky založené tlačítkem „Nový rok"
+
+  /* ---------- Roky ---------- */
+  const yearOf = r => String(r.rok || (r.datum || "").slice(0, 4));
+  function extraYears() { try { return JSON.parse(localStorage.getItem(YKEY)) || []; } catch { return []; } }
+  function allYears() {
+    return [...new Set([...records.map(yearOf), ...extraYears().map(String)].filter(Boolean))].sort().reverse();
+  }
+  function addYear() {
+    const ys = allYears();
+    const def = ys.length ? Number(ys[0]) + 1 : new Date().getFullYear();
+    const v = prompt("Zadej nový rok (evidence se v něm číslují od 1):", def);
+    if (v === null) return;
+    const y = String(parseInt(v, 10));
+    if (!/^20\d\d$/.test(y)) return H.toast("Zadej platný rok, např. " + def, true);
+    if (!allYears().includes(y)) {
+      try { localStorage.setItem(YKEY, JSON.stringify([...extraYears(), y])); } catch { /* ignorováno */ }
+    }
+    yearSel = y;
+    render();
+    H.toast("Rok " + y + " je připraven");
+  }   // výchozí řazení: nejnovější nahoře
   let onSave = null, onDelete = null;     // callbacky nastavené v main.js
 
   /* ---------- Naplnění <select> a <datalist> ---------- */
@@ -2295,7 +2449,7 @@ window.UI = (() => {
     const list = records.filter(r =>
       (!tisk || r.tiskarna === tisk) &&
       (!dok || r.dokonceno === dok) &&
-      (!rok || (r.datum || "").startsWith(rok)) &&
+      (!rok || yearOf(r) === rok) &&
       (!q || H.norm([r.nazev, r.poznamka, r.barva, r.kdo, r.vlastnik, r.model].join(" ")).includes(q)));
     list.sort((a, b) => {
       const x = a[sort.key] ?? "", y = b[sort.key] ?? "";
@@ -2308,10 +2462,12 @@ window.UI = (() => {
   /* ---------- Vykreslení ---------- */
   function render() {
     // roky do filtru
-    const years = [...new Set(records.map(r => (r.datum || "").slice(0, 4)).filter(Boolean))].sort().reverse();
-    const sel = $("#flt-rok"), cur = sel.value;
+    const years = allYears();
+    if (yearSel === null && years.length) yearSel = years[0];      // výchozí = nejnovější rok
+    if (yearSel && !years.includes(yearSel)) yearSel = years[0] || "";
+    const sel = $("#flt-rok");
     sel.innerHTML = '<option value="">Všechny roky</option>' + years.map(y => `<option>${y}</option>`).join("");
-    sel.value = years.includes(cur) ? cur : "";
+    sel.value = yearSel || "";
 
     const list = visible();
     $("#tbody").innerHTML = list.map(r => `
@@ -2352,8 +2508,10 @@ window.UI = (() => {
   }
 
   /* ---------- Formulář (přidat / upravit) ---------- */
-  function nextNumber() {
-    return records.reduce((m, r) => Math.max(m, Number(r.cislo) || 0), 0) + 1;
+  /** Další číslo tisku – počítá se zvlášť pro každý rok */
+  function nextNumber(rok) {
+    return records.filter(r => yearOf(r) === String(rok))
+      .reduce((m, r) => Math.max(m, Number(r.cislo) || 0), 0) + 1;
   }
 
   function openForm(rec) {
@@ -2361,11 +2519,14 @@ window.UI = (() => {
     f.reset();
     $("#form-title").textContent = rec ? "Upravit tisk" : "Nový tisk";
     f.dataset.id = rec ? rec.id : "";
-    const d = rec || {
-      cislo: nextNumber(), datum: H.today(), kdo: opt.kdo[0], tiskarna: opt.tiskarna[0],
+    const years = allYears();
+    const rokNew = yearSel || years[0] || String(new Date().getFullYear());
+    fillSelect($("#f-rok"), years.includes(rokNew) ? years : [rokNew, ...years]);
+    const d = rec ? { ...rec, rok: yearOf(rec) } : {
+      rok: rokNew, cislo: nextNumber(rokNew), datum: H.today(), kdo: opt.kdo[0], tiskarna: opt.tiskarna[0],
       dokonceno: "ANO", model: "PLA"
     };
-    for (const k of ["cislo", "nazev", "datum", "kdo", "tiskarna", "cas", "dokonceno", "poznamka", "barva", "model", "vlastnik"]) {
+    for (const k of ["rok", "cislo", "nazev", "datum", "kdo", "tiskarna", "cas", "dokonceno", "poznamka", "barva", "model", "vlastnik"]) {
       const el = f.elements[k];
       if (!el) continue;
       // hodnota mimo seznam se doplní, aby se při úpravě neztratila
@@ -2381,7 +2542,7 @@ window.UI = (() => {
     return {
       id: f.dataset.id,
       data: {
-        cislo: Number(v("cislo")) || nextNumber(), nazev: v("nazev"), datum: v("datum"), kdo: v("kdo"),
+        rok: Number(v("rok")), cislo: Number(v("cislo")) || nextNumber(v("rok")), nazev: v("nazev"), datum: v("datum"), kdo: v("kdo"),
         tiskarna: v("tiskarna"), cas: v("cas"), dokonceno: v("dokonceno"), poznamka: v("poznamka"),
         barva: v("barva"), model: v("model"), vlastnik: v("vlastnik")
       }
@@ -2390,9 +2551,9 @@ window.UI = (() => {
 
   /* ---------- Export CSV ---------- */
   function exportCsv() {
-    const head = ["Č. tisku", "Co se tisklo", "Kdy", "Kdo", "Tiskárna", "Čas", "Dokončeno", "Poznámka", "Barva", "Model", "Vlastník"];
+    const head = ["Rok", "Č. tisku", "Co se tisklo", "Kdy", "Kdo", "Tiskárna", "Čas", "Dokončeno", "Poznámka", "Barva", "Model", "Vlastník"];
     const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
-    const rows = visible().map(r => [r.cislo, r.nazev, r.datum, r.kdo, r.tiskarna, r.cas, r.dokonceno, r.poznamka, r.barva, r.model, r.vlastnik].map(q).join(";"));
+    const rows = visible().map(r => [yearOf(r), r.cislo, r.nazev, r.datum, r.kdo, r.tiskarna, r.cas, r.dokonceno, r.poznamka, r.barva, r.model, r.vlastnik].map(q).join(";"));
     H.download(`3d-tisk-${H.today()}.csv`, [head.map(q).join(";"), ...rows].join("\r\n"));
   }
 
@@ -2401,9 +2562,17 @@ window.UI = (() => {
     ({ onSave, onDelete } = handlers);
     initOptions();
 
-    ["#search", "#flt-tiskarna", "#flt-dokonceno", "#flt-rok"].forEach(s => $(s).addEventListener("input", render));
+    ["#search", "#flt-tiskarna", "#flt-dokonceno"].forEach(s => $(s).addEventListener("input", render));
+    $("#flt-rok").addEventListener("input", () => { yearSel = $("#flt-rok").value; render(); });
     $("#btn-new").addEventListener("click", () => openForm(null));
     $("#btn-export").addEventListener("click", exportCsv);
+    $("#btn-print").addEventListener("click", () => window.print());
+    $("#btn-year").addEventListener("click", addYear);
+    // změna roku ve formuláři u nového záznamu přepočítá číslo tisku
+    $("#f-rok").addEventListener("change", () => {
+      const f = $("#form");
+      if (!f.dataset.id) f.elements.cislo.value = nextNumber(f.elements.rok.value);
+    });
     $("#btn-cancel").addEventListener("click", () => $("#modal").close());
 
     $("#form").addEventListener("submit", async e => {
@@ -2460,7 +2629,17 @@ window.UI = (() => {
       }
     });
 
-    DB.subscribe(UI.setRecords, err => toast("Chyba databáze: " + err.message, true));
+    // Záznamy bez roku (starší import) dostanou rok podle původního listu tabulky
+    let fixed = false;
+    function fixYears(list) {
+      const seed = new Map((window.SEED_DATA || []).map(s => [s.nazev + "|" + s.datum + "|" + s.cislo, s.rok]));
+      list.filter(r => !r.rok).forEach(r =>
+        DB.update(r.id, { rok: seed.get(r.nazev + "|" + r.datum + "|" + r.cislo) || Number((r.datum || "").slice(0, 4)) || new Date().getFullYear() }));
+    }
+    DB.subscribe(list => {
+      UI.setRecords(list);
+      if (!fixed && list.length) { fixed = true; fixYears(list); }
+    }, err => toast("Chyba databáze: " + err.message, true));
 
     $("#btn-logout").addEventListener("click", () => Auth.logout());
 
